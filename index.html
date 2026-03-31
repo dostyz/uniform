@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>♡ 공주 반티주문서 ♡</title>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ✅ 여기에 본인 Firebase 설정 붙여넣기
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwVk0Cexuh0to9AO_zdLXL7BTjZYIIeU4",
+  authDomain: "uniform-3033b.firebaseapp.com",
+  projectId: "uniform-3033b",
+  storageBucket: "uniform-3033b.firebasestorage.app",
+  messagingSenderId: "544612686596",
+  appId: "1:544612686596:web:b1cde9b68b151ae4bbce51"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+🚫🚫
+
+  window.submitOrder = async function() {
+    const nameInput = document.getElementById('nameInput').value.trim();
+    const backNumber = document.getElementById('backNumberInput').value.trim();
+    const backText = document.getElementById('backTextInput').value.trim();
+    const topSize = document.querySelector('input[name="topSize"]:checked');
+    const bottomSize = document.querySelector('input[name="bottomSize"]:checked');
+
+    if (!nameInput) { showError('번호와 이름을 입력해주세요!'); return; }
+    const numMatch = nameInput.match(/^(\d+)\s*\/\s*(.+)$/);
+    if (!numMatch) { showError('형식에 맞게 입력해주세요 (예: 21 / 전은주)'); return; }
+    const orderNum = parseInt(numMatch[1]);
+    const name = numMatch[2].trim();
+    if (orderNum < 1 || orderNum > 24) { showError('번호는 1~24 사이여야 해요!'); return; }
+    if (!backNumber) { showError('등번호를 입력해주세요!'); return; }
+    if (!backText) { showError('등 문구를 입력해주세요!'); return; }
+    if (!topSize) { showError('상의 사이즈를 선택해주세요!'); return; }
+    if (!bottomSize) { showError('바지 사이즈를 선택해주세요!'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '제출 중...';
+
+    try {
+      await addDoc(collection(db, 'orders'), {
+        orderNum, name, backNumber, backText,
+        topSize: topSize.value,
+        bottomSize: bottomSize.value,
+        submittedAt: new Date()
+      });
+      showSuccess();
+      loadNotSubmitted();
+    } catch (e) {
+      showError('저장 실패: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '제 출 ♡';
+    }
+  };
+
+  window.loadOrders = async function() {
+    const section = document.getElementById('orderTableSection');
+    const tbody = document.getElementById('orderTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">불러오는 중...</td></tr>';
+    section.style.display = 'block';
+    setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+    try {
+      // 번호/이름에서 입력한 번호(orderNum) 기준 오름차순 정렬
+      const q = query(collection(db, 'orders'), orderBy('orderNum', 'asc'));
+      const snap = await getDocs(q);
+      tbody.innerHTML = '';
+      if (snap.empty) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">아직 주문이 없어요 ♡</td></tr>';
+        return;
+      }
+      snap.forEach(doc => {
+        const d = doc.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${d.orderNum}</td>
+          <td>${d.name}</td>
+          <td>${d.backNumber}</td>
+          <td>${d.backText}</td>
+          <td>${d.topSize}</td>
+          <td>${d.bottomSize}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="loading-cell" style="color:#c0392b">오류: ${e.message}</td></tr>`;
+    }
+  };
+
+  window.loadNotSubmitted = async function() {
+    try {
+      const snap = await getDocs(collection(db, 'orders'));
+      const submitted = new Set();
+      snap.forEach(doc => submitted.add(doc.data().orderNum));
+      const not = [];
+      for (let i = 1; i <= 24; i++) if (!submitted.has(i)) not.push(i);
+      document.getElementById('notSubmitted').textContent =
+        not.length > 0 ? not.join(', ') : '없음 🎉 모두 완료!';
+    } catch(e) {}
+  };
+
+  window.addEventListener('load', () => loadNotSubmitted());
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper: #fdf8f0;
+    --paper-dark: #f5eedd;
+    --ink: #2c1810;
+    --ink-mid: #5a3e30;
+    --ink-light: #8b6650;
+    --accent: #c0392b;
+    --border: #b8956a;
+    --line: #dbc9a8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: #c8b99a;
+    min-height: 100vh;
+    font-family: 'Noto Serif KR', serif;
+    padding: 18px 12px 40px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── 영수증 카드 ── */
+  .receipt {
+    background: var(--paper);
+    max-width: 420px;
+    margin: 0 auto;
+    box-shadow: 3px 3px 0 #a08060, 6px 6px 0 #8b6e50, 8px 8px 18px rgba(0,0,0,0.25);
+  }
+
+  .receipt-top-edge {
+    height: 16px;
+    background:
+      radial-gradient(circle at 10px -1px, transparent 9px, var(--paper-dark) 9px) 0 0 / 20px 16px,
+      var(--paper-dark);
+    border-bottom: 1px dashed var(--line);
+  }
+  .receipt-bottom-edge {
+    height: 16px;
+    background:
+      radial-gradient(circle at 10px 17px, transparent 9px, var(--paper-dark) 9px) 0 0 / 20px 16px,
+      var(--paper-dark);
+    border-top: 1px dashed var(--line);
+  }
+
+  .receipt-body { padding: 18px 20px 22px; }
+
+  /* ── 헤더 ── */
+  .r-header {
+    text-align: center;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 2.5px double var(--border);
+  }
+  .r-hearts { color: var(--accent); font-size: 13px; letter-spacing: 6px; margin-bottom: 5px; }
+  .r-title {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 1px;
+  }
+  .r-sub {
+    font-family: 'Special Elite', monospace;
+    font-size: 10px;
+    color: var(--ink-light);
+    letter-spacing: 4px;
+    margin-top: 3px;
+  }
+
+  /* ── 미제출자 ── */
+  .not-box {
+    background: var(--paper-dark);
+    border: 1px dashed var(--border);
+    padding: 10px 12px;
+    margin-bottom: 18px;
+  }
+  .not-box-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  #notSubmitted {
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+    line-height: 1.8;
+    word-break: break-all;
+  }
+
+  /* ── 구분선 ── */
+  .dashed { border: none; border-top: 1px dashed var(--line); margin: 16px 0; }
+
+  /* ── 필드 ── */
+  .field { margin-bottom: 16px; }
+  .field-label {
+    font-size: 11px;
+    color: var(--ink-mid);
+    letter-spacing: 0.5px;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .field-label::before { content: '▸'; color: var(--accent); font-size: 9px; }
+
+  /* iOS 자동줌 방지: 반드시 16px 이상 */
+  input[type="text"] {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--border);
+    padding: 9px 4px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 16px;
+    color: var(--ink);
+    outline: none;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+  input[type="text"]:focus { border-bottom-color: var(--accent); }
+  input[type="text"]::placeholder { color: #c0a88a; font-size: 14px; }
+
+  /* ── 사이즈 버튼 ── */
+  .size-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .size-opt { position: relative; }
+  .size-opt input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .size-opt label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    height: 42px;
+    padding: 0 10px;
+    border: 1.5px solid var(--border);
+    font-family: 'Special Elite', monospace;
+    font-size: 13px;
+    color: var(--ink-mid);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.1s, color 0.1s;
+  }
+  .size-opt input[type="radio"]:checked + label {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    font-weight: 700;
+  }
+  .size-opt label:active { background: var(--line); }
+
+  /* ── 제출 버튼 ── */
+  #submitBtn {
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 16px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+  #submitBtn:active { background: var(--accent); }
+  #submitBtn:disabled { opacity: 0.55; }
+
+  .error-msg {
+    display: none;
+    color: var(--accent);
+    font-size: 12px;
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── 내역 버튼 ── */
+  .view-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--ink-mid);
+    border: 1.5px solid var(--border);
+    padding: 14px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    margin-top: 10px;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+  .view-btn:active { background: var(--paper-dark); }
+
+  /* ── 푸터 ── */
+  .r-footer {
+    text-align: center;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-size: 10px;
+    color: var(--ink-light);
+    letter-spacing: 2px;
+    font-family: 'Special Elite', monospace;
+  }
+
+  /* ── 성공 오버레이 ── */
+  .success-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30,15,8,0.88);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .success-overlay.show { display: flex; }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.2); opacity: 0; }
+    65%  { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .success-icon {
+    font-size: 88px;
+    line-height: 1;
+    animation: popIn 0.45s cubic-bezier(.175,.885,.32,1.275) forwards;
+  }
+  .success-text {
+    color: #fdf8f0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    margin-top: 18px;
+  }
+  .success-sub { color: #c4a882; font-size: 13px; margin-top: 6px; letter-spacing: 2px; }
+  .success-close {
+    margin-top: 28px;
+    background: #fdf8f0;
+    color: #2c1810;
+    border: none;
+    padding: 14px 44px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 3px;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  /* ── 주문 내역 테이블 ── */
+  #orderTableSection {
+    display: none;
+    max-width: 420px;
+    margin: 20px auto 0;
+  }
+  .table-receipt {
+    background: var(--paper);
+    box-shadow: 3px 3px 0 #a08060, 6px 6px 0 #8b6e50, 8px 8px 18px rgba(0,0,0,0.22);
+    overflow: hidden;
+  }
+  .table-top-edge {
+    height: 16px;
+    background:
+      radial-gradient(circle at 10px -1px, transparent 9px, var(--paper-dark) 9px) 0 0 / 20px 16px,
+      var(--paper-dark);
+    border-bottom: 1px dashed var(--line);
+  }
+  .table-body { padding: 16px 14px 22px; }
+  .table-title {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 2px double var(--border);
+  }
+
+  /* 모바일 가로 스크롤 */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  table {
+    width: 100%;
+    min-width: 310px;
+    border-collapse: collapse;
+  }
+  thead tr { background: var(--ink); }
+  thead th {
+    padding: 9px 5px;
+    color: var(--paper);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  tbody tr { border-bottom: 1px dashed var(--line); }
+  tbody tr:nth-child(even) { background: var(--paper-dark); }
+  tbody td {
+    padding: 9px 5px;
+    text-align: center;
+    color: var(--ink);
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .loading-cell { text-align: center; padding: 20px; color: var(--ink-mid); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- 성공 오버레이 -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon">✅</div>
+  <div class="success-text">제출 완료!</div>
+  <div class="success-sub">주문이 접수됐어요 ♡</div>
+  <button class="success-close" onclick="closeSuccess()">확인</button>
+</div>
+
+<!-- 주문서 영수증 -->
+<div class="receipt">
+  <div class="receipt-top-edge"></div>
+  <div class="receipt-body">
+
+    <div class="r-header">
+      <div class="r-hearts">♡ ♡ ♡</div>
+      <div class="r-title">공주 반티주문서</div>
+      <div class="r-sub">CLASS ORDER FORM</div>
+    </div>
+
+    <div class="not-box">
+      <div class="not-box-label">📋 주문 안 한 공주</div>
+      <div id="notSubmitted">불러오는 중...</div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">번호 / 이름을 입력하세요</div>
+      <input type="text" id="nameInput" placeholder="예: 21 / 전은주" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <div class="field-label">등번호를 입력하세요</div>
+      <input type="text" id="backNumberInput" placeholder="예: 7" inputmode="numeric" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <div class="field-label">등 문구를 입력하세요</div>
+      <input type="text" id="backTextInput" placeholder="예: PRINCESS" autocomplete="off">
+    </div>
+
+    <hr class="dashed">
+
+    <div class="field">
+      <div class="field-label">상의 사이즈를 선택하세요</div>
+      <div class="size-group">
+        <div class="size-opt"><input type="radio" name="topSize" id="tS" value="S"><label for="tS">S</label></div>
+        <div class="size-opt"><input type="radio" name="topSize" id="tM" value="M"><label for="tM">M</label></div>
+        <div class="size-opt"><input type="radio" name="topSize" id="tL" value="L"><label for="tL">L</label></div>
+        <div class="size-opt"><input type="radio" name="topSize" id="tXL" value="XL"><label for="tXL">XL</label></div>
+        <div class="size-opt"><input type="radio" name="topSize" id="tXXL" value="XXL"><label for="tXXL">XXL</label></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">바지 사이즈를 선택하세요</div>
+      <div class="size-group">
+        <div class="size-opt"><input type="radio" name="bottomSize" id="bS" value="S"><label for="bS">S</label></div>
+        <div class="size-opt"><input type="radio" name="bottomSize" id="bM" value="M"><label for="bM">M</label></div>
+        <div class="size-opt"><input type="radio" name="bottomSize" id="bL" value="L"><label for="bL">L</label></div>
+        <div class="size-opt"><input type="radio" name="bottomSize" id="bXL" value="XL"><label for="bXL">XL</label></div>
+        <div class="size-opt"><input type="radio" name="bottomSize" id="bXXL" value="XXL"><label for="bXXL">XXL</label></div>
+        <div class="size-opt"><input type="radio" name="bottomSize" id="bNone" value="구매안함"><label for="bNone">구매안함</label></div>
+      </div>
+    </div>
+
+    <hr class="dashed">
+
+    <button id="submitBtn" onclick="submitOrder()">제 출 ♡</button>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <button class="view-btn" onclick="loadOrders()">♡ 주문내역 확인하기 ♡</button>
+
+    <div class="r-footer">No. 1 – 24 &nbsp;·&nbsp; BANTEE ORDER</div>
+  </div>
+  <div class="receipt-bottom-edge"></div>
+</div>
+
+<!-- 주문 내역 테이블 -->
+<div id="orderTableSection">
+  <div class="table-receipt">
+    <div class="table-top-edge"></div>
+    <div class="table-body">
+      <div class="table-title">✦ 전체 주문 내역 ✦</div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>번호</th>
+              <th>이름</th>
+              <th>등번호</th>
+              <th>등문구</th>
+              <th>상의</th>
+              <th>바지</th>
+            </tr>
+          </thead>
+          <tbody id="orderTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+  function showSuccess() {
+    document.getElementById('successOverlay').classList.add('show');
+    document.getElementById('nameInput').value = '';
+    document.getElementById('backNumberInput').value = '';
+    document.getElementById('backTextInput').value = '';
+    document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = false;
+    btn.textContent = '제 출 ♡';
+  }
+  function closeSuccess() {
+    document.getElementById('successOverlay').classList.remove('show');
+  }
+</script>
+</body>
+</html>
